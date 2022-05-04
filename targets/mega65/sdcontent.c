@@ -395,6 +395,7 @@ static int update_sdcard_file ( const char *on_card_name, int options, const cha
 	if (block == 0)
 		goto error_on_maybe_sys_file;
 	// Copy file block by block
+	int size_to_install_original = size_to_install;
 	while (size_to_install) {
 		Uint8 buffer[512];
 		int need = (size_to_install < sizeof buffer) ? size_to_install : sizeof buffer;
@@ -418,6 +419,7 @@ static int update_sdcard_file ( const char *on_card_name, int options, const cha
 		sdcard_write_block(block++, buffer);	// FIXME: error handling!!!
 		size_to_install -= need;
 	}
+	// Also write file into the HDOS virtualization directory
 	if (fd >= 0)
 		close(fd);
 	return 0;

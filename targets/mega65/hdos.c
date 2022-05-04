@@ -32,9 +32,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 #include <sys/types.h>
 #include <unistd.h>
 
-// This source is meant to virtualize Hyppo's HDOS functions to be able to access
+// This source is meant to virtualize Hyppo's DOS functions to be able to access
 // the host OS (what runs Xemu) filesystem via the normal HDOS calls (ie what
-// you would see the sd-card otherwise).
+// would see the sd-card otherwise).
 
 //#define DEBUGHDOS(...) DEBUG(__VA_ARGS__)
 #define DEBUGHDOS(...) DEBUGPRINT(__VA_ARGS__)
@@ -92,7 +92,7 @@ static int copy_mem_from_user ( Uint8 *target, int max_size, const int terminato
 	if (terminator_byte >= 0)
 		max_size--;
 	for (;;) {
-		// HDOS calls should not have user specified data >= $8000!
+		// DOS calls should not have user specified data >= $8000!
 		if (source_cpu_addr >= 0x8000)
 			return -1;
 		const Uint8 byte = memory_debug_read_cpu_addr(source_cpu_addr++);
@@ -234,13 +234,13 @@ error_some:
 static const char *hdos_get_func_name ( const int func_no )
 {
 	if (XEMU_UNLIKELY((func_no & 1) || (unsigned int)func_no >= 0x80U)) {
-		FATAL("%s(%d) invalid HDOS trap function number", __func__, func_no);
+		FATAL("%s(%d) invalid DOS trap function number", __func__, func_no);
 		return "?";
 	}
-	// HDOS function names are from hyppo's asm source from mega65-core repository
+	// DOS function names are from hyppo's asm source from mega65-core repository
 	// It should be updated if there is a change there. Also maybe at other parts of
 	// this source too, to follow the ABI of the Hyppo-DOS here too.
-	static const char INVALID_SUBFUNCTION[] = "INVALID_HDOS_FUNC";
+	static const char INVALID_SUBFUNCTION[] = "INVALID_DOS_FUNC";
 	static const char *func_names[] = {
 		"getversion",					// 00
 		"getdefaultdrive",				// 02
@@ -455,7 +455,7 @@ static void hdos_virt_loadfile ( const Uint32 addr_base )
 	for (;;) {
 		Uint8 buffer[1024];
 		ret = xemu_safe_read(fd, buffer, sizeof buffer);
-		if (ret <= 0)			// error (ret < 0) or end of file (ret == 0)
+		if (ret <= 0)
 			break;
 		loaded += ret;
 		if (loaded > st.st_size) {	// should not happen, but nice to check, anyway
@@ -692,7 +692,7 @@ static void _hdos_func_unimplemented ( const char *by_entity )
 #define HDOS_VIRT_XEMU_UNIMPLEMENTED()	_hdos_func_unimplemented("XEMU")
 
 
-// Called when HDOS trap is triggered.
+// Called when DOS trap is triggered.
 // Can be used to take control (without hyppo doing it) but setting the needed register values,
 // and calling hypervisor_leave() to avoid Hyppo to run.
 void hdos_enter ( const Uint8 func_no )
@@ -721,8 +721,8 @@ void hdos_enter ( const Uint8 func_no )
 		// Let's see the virualized functions.
 		// Those should set hdos.func_is_virtualized, also the hdos.virt_out_carry is operation was OK, and probably they want to
 		// set some register values as output in hdos.virt_out_a, hdos.virt_out_x, hdos.virt_out_y and hdos.virt_out_z
-		// The reason of this complicated method: the switch-case below contains the call of virtualized HDOS function implementations and
-		// they can decide to NOT set hdos.func_is_virtualized conditionally, so it's even possible to have virtualized HDOS file functions
+		// The reason of this complicated method: the switch-case below contains the call of virtualized DOS function implementations and
+		// they can decide to NOT set hdos.func_is_virtualized conditionally, so it's even possible to have virtualized DOS file functions
 		// just for a certain directory / file names, and so on! (though it's currently not so much planned to use ...).
 		// The reason for ">> 1" everywhere: to have a continous space of switch values and allow better chance for C compiler to generate a jump-table.
 		switch (hdos.func >> 1) {
@@ -764,10 +764,8 @@ void hdos_enter ( const Uint8 func_no )
 			case 0x14 >> 1:
 				hdos_virt_readdir();
 				break;
-			case 0x16 >> 1:	// same function as $20
-				hdos_virt_close_dir_or_file();
-				break;
-			case 0x20 >> 1:	// same function as $16
+			case 0x16 >> 1:
+			case 0x20 >> 1:
 				hdos_virt_close_dir_or_file();
 				break;
 			case 0x2E >> 1:	// setname, do NOT virtualize this! (though we track/store result in hdos_leave) It's also great that we have hyppo's check on filename syntax, etc.
@@ -792,9 +790,6 @@ void hdos_enter ( const Uint8 func_no )
 			case 0x3C >> 1:
 				hdos_virt_cdroot();
 				break;
-			case 0x3E >> 1:	// loadfile_attic
-				hdos_virt_loadfile(0x8000000);	// the same as function $36, however the base address is the start of the "attic RAM" and not zero (start of fast RAM)
-				break;
 			case 0x40 >> 1:
 				hdos_virt_mount(0);
 				break;
@@ -818,15 +813,15 @@ void hdos_enter ( const Uint8 func_no )
 				hdos.error_code = hdos.virt_out_a;	// also remember the error code for the get last error function
 			}
 			DEBUGHDOS("HDOS: VIRT: returning %s (A=$%02X) from virtualized function #$%02X bypassing Hyppo" NL, hdos.virt_out_carry ? "OK" : "ERROR", hdos.virt_out_a, hdos.func);
-			// forced leave of hypervisor mode now, bypassing hyppo to process this HDOS trap function
+			// forced leave of hypervisor mode now, bypassing hyppo to process this DOS trap function
 			hypervisor_leave();
 		} else
-			DEBUGHDOS("HDOS: VIRT: unvirtualized HDOS function #$%02X pass-through to Hyppo" NL, hdos.func);
+			DEBUGHDOS("HDOS: VIRT: unvirtualized DOS function #$%02X pass-through to Hyppo" NL, hdos.func);
 	}
 }
 
 
-// Called when HDOS trap is leaving.
+// Called when DOS trap is leaving.
 // Can be used to examine the result hyppo did with a call, or even do some modifications.
 void hdos_leave ( const Uint8 func_no )
 {
