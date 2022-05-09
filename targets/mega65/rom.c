@@ -20,9 +20,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 #include "xemu/emutools_files.h"
 #include "memcontent.h"
 
-#define CHARACTER_SET_DEFINER_8X8 const Uint8 vga_font_8x8[2048]
-#include "xemu/vgafonts.c"
-
 
 int rom_date = 0;
 int rom_is_openroms = 0;
@@ -76,6 +73,58 @@ static int rom_detect_try ( const Uint8 *rom, const Uint8 rom_id )
 			return -1;
 	}
 	return ret;
+}
+
+
+static inline Sint64 BDF_LL ( const Uint8 *b )
+{
+	return (Sint64)(Uint64)(
+		((Uint64)b[0]      ) + ((Uint64)b[1] <<  8) + ((Uint64)b[2] << 16) + ((Uint64)b[3] << 24) +
+		((Uint64)b[4] << 32) + ((Uint64)b[5] << 40) + ((Uint64)b[6] << 48) + ((Uint64)b[7] << 56)
+	);
+}
+
+
+const char *rom_bdf_patch ( const char *patch_fn, const char *ref_fn, Uint8 *output )
+{
+	const int fd = xemu_open_file(patch_fn, O_RDONLY, NULL, NULL);
+	if (fd < 0)
+		return "cannot be opened";
+	Uint8 header[32];
+	if (xemu_safe_read(fd, header, sizeof header) != sizeof header) {	// read the BDF header
+		close(fd);
+		return "cannot read or too short file";
+	}
+	static const Uint8 magic_bytes[] = {'B','S','D','I','F','F','4','0'};
+	if (memcmp(header, magic_bytes, sizeof magic_bytes)) {
+		close(fd);
+		return "wrong magic bytes";
+	}
+	const Sint64 ctrl_blk_len = BDF_LL(header +  8);
+	const Sint64 data_blk_len = BDF_LL(header + 16);
+	if (ctrl_blk_len < 0 || data_blk_len < 0) {
+		close(fd);
+		return "wrong offset(s)";
+	}
+	if (BDF_LL(header + 24) != (Sint64)0x20000) {
+		close(fd);
+		return "wrong output size";
+	}
+	if (!ref_fn) {
+		// So far, patch seems to be a BDF file
+		// Since no ref_fn, return with OK. used only to test if the file is BDF!
+		close(fd);
+		return NULL;
+	}
+	const int ref_fd = xemu_open_file(ref_fn, O_RDONLY, NULL, NULL);
+	if (ref_fd < 0) {
+		close(fd);
+		return "cannot open reference file";
+	}
+	for (int newpos = 0; newpos < 0x20000;) {
+		newpos++;
+	}
+	return NULL;
 }
 
 
