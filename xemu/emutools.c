@@ -724,7 +724,7 @@ void xemu_pre_init ( const char *app_organization, const char *app_name, const c
 		FATAL("Xemu must not be run as user root");
 	if (getgid() == 0 || getegid() == 0)
 		FATAL("Xemu must not be run as group root");
-#else
+#elif !defined(XEMU_ARCH_SINGLEUSER)
 #	warning "Running as root check is deactivated."
 #endif
 	// ignore SIGHUP, eg closing the terminal Xemu was started from ...

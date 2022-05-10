@@ -1,5 +1,5 @@
 /* Part of the Xemu project, please visit: https://github.com/lgblgblgb/xemu
-   Copyright (C)2016-2020 LGB (Gábor Lénárt) <lgblgblgb@gmail.com>
+   Copyright (C)2016-2022 LGB (Gábor Lénárt) <lgblgblgb@gmail.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -102,6 +102,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 		// Haiku is not so much a multi-user system, thus we want
 		// to do this:
 #		define	XEMU_DO_NOT_DISALLOW_ROOT
+		// Also in general:
+#		define	XEMU_ARCH_SINGLEUSER
 #else
 #	error	"Unknown target OS architecture."
 #endif
