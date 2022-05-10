@@ -91,6 +91,17 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 #		define	__BSD_VISIBLE	1
 #	endif
 #	define	XEMU_SLEEP_IS_NANOSLEEP
+#elif defined(__HAIKU__)
+		// Haiku is not really a UNIX, but for starting point let's define
+		// it that way, since Xemu relies at many places that everything
+		// which is not Windows is UNIX (including Linux and MacOS)
+#		define	XEMU_ARCH_UNIX
+#		define	XEMU_ARCH_HAIKU
+#		define	XEMU_ARCH_NAME	"haiku"
+#		define	XEMU_SLEEP_IS_NANOSLEEP
+		// Haiku is not so much a multi-user system, thus we want
+		// to do this:
+#		define	XEMU_DO_NOT_DISALLOW_ROOT
 #else
 #	error	"Unknown target OS architecture."
 #endif
